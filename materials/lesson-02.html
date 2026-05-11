@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#f5f0eb">
+<title>오답 단어장 - 김우형</title>
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f5f0eb; --card: #ffffff; --accent: #2d5be3; --accent2: #e3502d;
+    --wrong-col: #d94040; --blank-col: #d97a20; --text: #1a1a2e; --text2: #6b6b80;
+    --muted: #b0aab8; --border: #e2dcd8; --tip-bg: #eef3ff; --ex-bg: #faf8f5;
+    --green: #1a9e6f; --pill-wrong: #fff0f0; --pill-blank: #fff5e8;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { width: 100%; height: 100%; background: var(--bg); font-family: 'Gowun Dodum', sans-serif; color: var(--text); overflow: hidden; overscroll-behavior: none; touch-action: pan-y; }
+  #app { display: flex; flex-direction: column; height: 100vh; height: 100dvh; padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); }
+  .header { flex-shrink: 0; padding: 12px 16px 8px; display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; }
+  .header-left .name { font-family: 'Space Grotesk', sans-serif; font-size: 0.65rem; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--accent); }
+  .header-left .title { font-family: 'Space Grotesk', sans-serif; font-size: 1.15rem; font-weight: 700; color: var(--text); margin-top: 2px; }
+  .header-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex-shrink: 0; }
+  .index-display { font-family: 'Space Grotesk', sans-serif; font-size: 0.95rem; font-weight: 700; color: var(--text); }
+  .index-display span { color: var(--muted); font-weight: 400; }
+  .prog-wrap { flex-shrink: 0; padding: 0 16px 10px; }
+  .prog-dots { display: flex; gap: 3px; }
+  .pdot { flex: 1; height: 4px; border-radius: 3px; background: var(--border); transition: background 0.3s; }
+  .pdot.done { background: var(--accent); } .pdot.current { background: var(--accent); opacity: 0.4; } .pdot.done.all { background: var(--green); }
+  .card-viewport { flex: 1; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; min-height: 0; touch-action: pan-y; user-select: none; -webkit-user-select: none; }
+  .flash-card { position: absolute; width: calc(100% - 24px); max-width: 430px; height: calc(100% - 10px); max-height: 620px; cursor: pointer; touch-action: pan-y; transition: transform 0.32s cubic-bezier(.4,0,.2,1), opacity 0.32s; }
+  .flash-card.no-transition { transition: none !important; } .flash-card.dragging { transition: none !important; }
+  .card-face { width: 100%; height: 100%; background: var(--card); border-radius: 22px; border: 1.5px solid var(--border); box-shadow: 0 8px 40px rgba(45,91,227,0.08), 0 2px 8px rgba(0,0,0,0.05); display: flex; flex-direction: column; overflow: hidden; }
+  .card-line { height: 4px; flex-shrink: 0; border-radius: 22px 22px 0 0; }
+  .line-wrong { background: linear-gradient(90deg, var(--wrong-col) 0%, #ff9980 100%); }
+  .line-blank { background: linear-gradient(90deg, var(--blank-col) 0%, #ffd080 100%); }
+  .card-content { flex: 1; padding: 16px 18px 12px; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
+  .face-word, .face-meaning { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+  .scroll-area { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; touch-action: pan-y; overscroll-behavior: contain; scrollbar-width: thin; }
+  .scroll-area::-webkit-scrollbar { width: 3px; } .scroll-area::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  .badges { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 12px; flex-shrink: 0; }
+  .badge { font-family: 'Space Grotesk', sans-serif; font-size: 0.58rem; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; padding: 3px 9px; border-radius: 20px; }
+  .b-num { background: var(--border); color: var(--text2); }
+  .b-wrong { background: var(--pill-wrong); color: var(--wrong-col); border: 1px solid #ffcccc; }
+  .b-blank { background: var(--pill-blank); color: var(--blank-col); border: 1px solid #ffddb0; }
+  .b-pos { background: #f0f0ff; color: var(--accent); border: 1px solid #d0d8ff; }
+  .b-src1 { background: #f0fff8; color: #1a9e6f; border: 1px solid #b0e8cc; }
+  .b-src2 { background: #f5f0ff; color: #6a3fb5; border: 1px solid #d0b8ff; }
+  .word-center, .meaning-center { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; gap: 6px; padding: 10px 0; min-height: 110px; }
+  .word-label, .meaning-label { font-family: 'Space Grotesk', sans-serif; font-size: 0.58rem; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
+  .word-text { font-family: 'Space Grotesk', sans-serif; font-size: 2.4rem; font-weight: 700; color: var(--text); letter-spacing: -1px; line-height: 1.1; word-break: break-word; }
+  .word-pos { font-size: 0.76rem; color: var(--text2); margin-top: 2px; }
+  .meaning-text { font-size: 1.85rem; font-weight: 400; color: var(--text); line-height: 1.3; }
+  .student-row { display: flex; align-items: center; gap: 8px; margin-top: 10px; padding: 8px 12px; border-radius: 10px; flex-shrink: 0; }
+  .student-row.wrong-row { background: var(--pill-wrong); border: 1px solid #ffcccc; }
+  .student-row.blank-row { background: var(--pill-blank); border: 1px solid #ffddb0; }
+  .student-label { font-family: 'Space Grotesk', sans-serif; font-size: 0.58rem; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; flex-shrink: 0; }
+  .wrong-row .student-label { color: var(--wrong-col); }
+  .blank-row .student-label { color: var(--blank-col); }
+  .student-ans { font-size: 0.82rem; color: var(--wrong-col); text-decoration: line-through; text-decoration-color: rgba(217,64,64,0.5); }
+  .blank-ans { font-size: 0.78rem; color: var(--muted); font-style: italic; }
+  .tip-box { background: var(--tip-bg); border-left: 3px solid var(--accent); border-radius: 0 12px 12px 0; padding: 9px 13px; font-size: 0.74rem; color: #3a5ab0; line-height: 1.6; margin-top: 10px; flex-shrink: 0; }
+  .tip-title { font-family: 'Space Grotesk', sans-serif; font-size: 0.58rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--accent); margin-bottom: 5px; }
+  .example-box { background: var(--ex-bg); border: 1px solid var(--border); border-radius: 12px; padding: 9px 13px; font-size: 0.72rem; color: var(--text2); line-height: 1.65; font-style: italic; margin-top: 7px; flex-shrink: 0; }
+  .example-box em { color: var(--accent2); font-style: normal; font-weight: 600; }
+  .tap-hint { text-align: center; font-size: 0.62rem; color: var(--muted); padding-top: 8px; padding-bottom: 2px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; gap: 5px; }
+  .tap-hint::before, .tap-hint::after { content: ''; display: inline-block; width: 18px; height: 1px; background: var(--border); }
+  .nav-hint { flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; padding: 8px 20px 10px; }
+  .nav-item { display: flex; align-items: center; gap: 5px; font-size: 0.63rem; color: var(--muted); }
+  .nav-arrow { font-size: 0.95rem; color: var(--border); }
+  .swipe-indicator { position: absolute; font-family: 'Space Grotesk', sans-serif; font-size: 0.7rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; padding: 8px 16px; border-radius: 10px; opacity: 0; pointer-events: none; z-index: 20; transition: opacity 0.1s; }
+  .ind-prev { top: 50%; transform: translateY(-50%); left: 16px; color: var(--accent); background: rgba(45,91,227,0.08); border: 1.5px solid rgba(45,91,227,0.2); }
+  .ind-next { top: 50%; transform: translateY(-50%); right: 16px; color: var(--text2); background: rgba(0,0,0,0.05); border: 1.5px solid var(--border); }
+  .ind-up { top: 16px; left: 50%; transform: translateX(-50%); color: var(--green); background: rgba(26,158,111,0.08); border: 1.5px solid rgba(26,158,111,0.2); }
+  .ind-down { bottom: 16px; left: 50%; transform: translateX(-50%); color: var(--text2); background: rgba(0,0,0,0.05); border: 1.5px solid var(--border); }
+  .random-btn { font-family: 'Space Grotesk', sans-serif; font-size: 0.6rem; font-weight: 700; padding: 8px 13px; border-radius: 18px; border: 1.5px solid var(--accent2); background: transparent; color: var(--accent2); cursor: pointer; min-height: 36px; display: inline-flex; align-items: center; gap: 4px; }
+  .random-btn.shuffled { background: var(--accent2); color: #fff; }
+  .mode-chip { display: inline-flex; align-items: center; gap: 2px; background: var(--border); border-radius: 22px; padding: 3px; }
+  .mode-btn { font-family: 'Space Grotesk', sans-serif; font-size: 0.6rem; font-weight: 600; padding: 8px 12px; border-radius: 18px; border: none; background: transparent; color: var(--text2); cursor: pointer; min-height: 36px; min-width: 60px; }
+  .mode-btn.active { background: var(--card); color: var(--accent); box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+  .end-card { position: absolute; width: calc(100% - 24px); max-width: 430px; height: calc(100% - 10px); max-height: 620px; touch-action: pan-y; transition: transform 0.32s cubic-bezier(.4,0,.2,1), opacity 0.32s; }
+  .end-card.no-transition { transition: none !important; }
+  .end-face { width: 100%; height: 100%; background: var(--card); border-radius: 22px; border: 1.5px solid var(--border); box-shadow: 0 8px 40px rgba(45,91,227,0.08); display: flex; flex-direction: column; overflow: hidden; }
+  .end-line { height: 4px; flex-shrink: 0; border-radius: 22px 22px 0 0; background: linear-gradient(90deg, var(--accent) 0%, #6a8eff 50%, var(--green) 100%); }
+  .end-content { flex: 1; padding: 24px 22px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 18px; }
+  .end-emoji { font-size: 3.4rem; animation: pop 0.6s cubic-bezier(.175,.885,.32,1.275); }
+  @keyframes pop { 0%{transform:scale(0);opacity:0} 60%{transform:scale(1.15);opacity:1} 100%{transform:scale(1);opacity:1} }
+  .end-label { font-family: 'Space Grotesk', sans-serif; font-size: 0.62rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); }
+  .end-title { font-size: 1.55rem; color: var(--text); line-height: 1.35; margin-top: -6px; }
+  .end-subtitle { font-size: 0.85rem; color: var(--text2); line-height: 1.6; }
+  .restart-btn { background: var(--accent); color: #fff; border: none; border-radius: 16px; padding: 14px 32px; font-family: 'Space Grotesk', sans-serif; font-size: 0.85rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; min-height: 48px; display: inline-flex; align-items: center; gap: 8px; }
+  .end-hint { font-size: 0.65rem; color: var(--muted); }
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="header">
+    <div class="header-left">
+      <div class="name">어휘끝_수능 · 김우형</div>
+      <div class="title">오답 단어장</div>
+    </div>
+    <div class="header-right">
+      <div class="index-display"><span id="cur">1</span> <span>/ <span id="tot">?</span></span></div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <button class="random-btn" id="btn-random" type="button">🔀 랜덤</button>
+        <div class="mode-chip">
+          <button class="mode-btn active" id="btn-word" type="button">단어→뜻</button>
+          <button class="mode-btn" id="btn-meaning" type="button">뜻→단어</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="prog-wrap"><div class="prog-dots" id="prog-dots"></div></div>
+  <div class="card-viewport" id="viewport">
+    <div class="swipe-indicator ind-prev" id="ind-prev">← 이전</div>
+    <div class="swipe-indicator ind-next" id="ind-next">다음 →</div>
+    <div class="swipe-indicator ind-up" id="ind-up">↑ 뒤집기</div>
+    <div class="swipe-indicator ind-down" id="ind-down">↓ 뒤집기</div>
+  </div>
+  <div class="nav-hint">
+    <div class="nav-item"><span class="nav-arrow">→</span> 이전 단어</div>
+    <div style="font-size:0.63rem;color:var(--muted)">탭·위아래스와이프 = 뒤집기</div>
+    <div class="nav-item">다음 단어 <span class="nav-arrow">←</span></div>
+  </div>
+</div>
+
+<script>
+// Unit 11/12 오답+미기재
+const cardsA = [
+  { num:1,  word:'come around',   pos:'구동사', type:'blank', src:'A', correct:'회복하다, 찾아오다', student:'', tip:'come around = 의식이 돌아오다, 생각이 바뀌다', example:'She finally <em>came around</em> to my idea.' },
+  { num:5,  word:'deem',          pos:'동사',   type:'blank', src:'A', correct:'여기다, 간주하다', student:'', tip:'deem = consider(여기다)와 같은 뜻', example:'He was <em>deemed</em> fit for the job.' },
+  { num:6,  word:'turn around',   pos:'구동사', type:'wrong', src:'A', correct:'돌아서다, 호전하다', student:'돌려내다', tip:'turn around = 상황이 반전되다', example:'The company <em>turned around</em> its losses.' },
+  { num:8,  word:'aggregate',     pos:'명사/동사', type:'wrong', src:'A', correct:'집계, 합계', student:'통계', tip:'aggregate ≠ statistics. 집합적으로 모은 합계', example:'The <em>aggregate</em> score was 300.' },
+  { num:12, word:'immerse',       pos:'동사',   type:'wrong', src:'A', correct:'몰두시키다, 담그다', student:'거대한', tip:'immerse = in(안으로) + merge(잠기다)', example:'She <em>immersed</em> herself in work.' },
+  { num:13, word:'come over',     pos:'구동사', type:'blank', src:'A', correct:'방문하다, 넘어오다', student:'', tip:'come over = 이쪽으로 건너오다, 방문하다', example:'Can you <em>come over</em> for dinner?' },
+  { num:17, word:'discrete',      pos:'형용사', type:'wrong', src:'A', correct:'별개의, 분리된', student:'불확실한', tip:'discrete(별개의) ≠ discreet(신중한) 철자 구분!', example:'The data is divided into <em>discrete</em> groups.' },
+  { num:19, word:'oral',          pos:'형용사', type:'wrong', src:'A', correct:'구두의, 구강의', student:'치아의', tip:'oral = 입(mouth)과 관련된 → 구두의, 구강의', example:'She gave an <em>oral</em> presentation.' },
+  { num:20, word:'unearth',       pos:'동사',   type:'blank', src:'A', correct:'발굴하다, 캐내다', student:'', tip:'un(아래에서) + earth(땅) → 땅에서 꺼내다', example:'They <em>unearthed</em> ancient artifacts.' },
+  { num:21, word:'demerit',       pos:'명사',   type:'wrong', src:'A', correct:'결점, 단점', student:'손해', tip:'de(아래로) + merit(장점) → 장점의 반대', example:'Every plan has its <em>demerits</em>.' },
+  { num:26, word:'get over',      pos:'구동사', type:'blank', src:'A', correct:'극복하다, 회복하다', student:'', tip:'get over = 넘어서다 → 극복하다', example:'It took time to <em>get over</em> the loss.' },
+  { num:27, word:'hang around',   pos:'구동사', type:'wrong', src:'A', correct:'어슬렁거리다, 기다리다', student:'(기호만 씀)', tip:'hang around = 목적 없이 주변을 맴돌다', example:'Don\'t <em>hang around</em> doing nothing.' },
+  { num:28, word:'intrude',       pos:'동사',   type:'blank', src:'A', correct:'침입하다, 방해하다', student:'', tip:'in(안으로) + trude(밀다) → 밀고 들어오다', example:'He <em>intruded</em> on our privacy.' },
+  { num:29, word:'loop',          pos:'명사/동사', type:'wrong', src:'A', correct:'고리, 순환', student:'환(불완전)', tip:'loop = 원형 고리. 한 글자만으론 부족!', example:'The video plays in a <em>loop</em>.' },
+  { num:30, word:'formidable',    pos:'형용사', type:'blank', src:'A', correct:'강력한, 만만치 않은', student:'', tip:'formidable = 두려움을 유발할 만큼 강력한', example:'She is a <em>formidable</em> opponent.' },
+  { num:32, word:'resort',        pos:'동사/명사', type:'blank', src:'A', correct:'의존하다, 리조트', student:'', tip:'resort to = ~에 의지하다(마지막 수단)', example:'Don\'t <em>resort</em> to violence.' },
+  { num:33, word:'degenerate',    pos:'동사/형용사', type:'wrong', src:'A', correct:'타락하다, 악화되다', student:'오염시키다', tip:'de(아래로) + generate(만들다) → 질이 낮아지다', example:'The situation <em>degenerated</em> rapidly.' },
+  { num:34, word:'illiterate',    pos:'형용사', type:'wrong', src:'A', correct:'문맹의', student:'비문화적이', tip:'il(not) + literate(글을 아는) → 글을 모르는', example:'He was functionally <em>illiterate</em>.' },
+  { num:36, word:'plausible',     pos:'형용사', type:'blank', src:'A', correct:'그럴듯한, 타당한', student:'', tip:'plausible = 믿을 만한 이유가 있는', example:'That\'s a <em>plausible</em> explanation.' },
+  { num:37, word:'imperative',    pos:'형용사/명사', type:'blank', src:'A', correct:'필수적인, 명령적인', student:'', tip:'imperative = 반드시 해야 하는', example:'It is <em>imperative</em> to act now.' },
+  { num:41, word:'immemorial',    pos:'형용사', type:'blank', src:'A', correct:'태고의, 아주 오랜', student:'', tip:'im(not) + memorial(기억) → 기억조차 안 되는 오래된', example:'Since time <em>immemorial</em>.' },
+  { num:42, word:'hollow',        pos:'형용사/명사', type:'wrong', src:'A', correct:'속이 빈, 공허한', student:'여들의', tip:'hollow = 안이 텅 빈, 진정성 없는', example:'His words felt <em>hollow</em>.' },
+  { num:43, word:'maladaptive',   pos:'형용사', type:'wrong', src:'A', correct:'부적응의', student:'비 수동적인', tip:'mal(나쁜) + adaptive(적응하는) → 적응 못 하는', example:'<em>Maladaptive</em> behavior can be changed.' },
+  { num:44, word:'counterattack', pos:'동사/명사', type:'wrong', src:'A', correct:'반격하다', student:'연습하다', tip:'counter(반대) + attack(공격) → 역공', example:'The army launched a <em>counterattack</em>.' },
+  { num:45, word:'outdo',         pos:'동사',   type:'blank', src:'A', correct:'능가하다', student:'', tip:'out(넘어서) + do(하다) → 더 잘 하다', example:'She always tries to <em>outdo</em> her rivals.' },
+  { num:46, word:'go over',       pos:'구동사', type:'blank', src:'A', correct:'검토하다', student:'', tip:'go over = 전체를 훑어보다 → 검토하다', example:'Let\'s <em>go over</em> the plan.' },
+  { num:47, word:'disprove',      pos:'동사',   type:'wrong', src:'A', correct:'반증하다', student:'부정하다', tip:'dis(반대) + prove(증명하다) → 틀렸음을 증명', example:'He <em>disproved</em> the theory.' },
+  { num:48, word:'vain',          pos:'형용사', type:'blank', src:'A', correct:'헛된, 허영심이 강한', student:'', tip:'in vain = 헛되이. vain = vanity(허영)', example:'All efforts were in <em>vain</em>.' },
+  { num:50, word:'deterioration', pos:'명사',   type:'blank', src:'A', correct:'악화, 저하', student:'', tip:'de(아래) + terior + ation → 점점 나빠짐', example:'The <em>deterioration</em> of health.' },
+];
+
+// Unit 01~09 오답+미기재
+const cardsB = [
+  { num:1,  word:'generate',    pos:'동사',   type:'wrong', src:'B', correct:'발생시키다, 만들다', student:'새발하다', tip:'generate = 에너지·수익 등을 만들어내다', example:'Solar panels <em>generate</em> electricity.' },
+  { num:3,  word:'lay off',     pos:'구동사', type:'wrong', src:'B', correct:'해고하다', student:'쌓아두다', tip:'lay off = 일자리를 없애다 → 해고하다', example:'The company <em>laid off</em> 200 workers.' },
+  { num:6,  word:'dominate',    pos:'동사',   type:'wrong', src:'B', correct:'지배하다', student:'유세한', tip:'dominate = domain(영역)의 동사형 → 장악하다', example:'She <em>dominated</em> the competition.' },
+  { num:10, word:'crude',       pos:'형용사', type:'blank', src:'B', correct:'조잡한, 원유의', student:'', tip:'crude oil = 원유. crude = 가공되지 않은, 거친', example:'That was a <em>crude</em> remark.' },
+  { num:12, word:'undermine',   pos:'동사',   type:'blank', src:'B', correct:'약화시키다', student:'', tip:'under(아래에서) + mine(파다) → 기반을 파괴하다', example:'Doubt can <em>undermine</em> confidence.' },
+  { num:14, word:'prominent',   pos:'형용사', type:'blank', src:'B', correct:'두드러진, 저명한', student:'', tip:'prominent = pro(앞으로) + minent(튀어나온)', example:'She is a <em>prominent</em> scientist.' },
+  { num:17, word:'glimpse',     pos:'동사/명사', type:'wrong', src:'B', correct:'흘끗 보다', student:'응시하다', tip:'glimpse ≠ gaze. 잠깐 스치듯 보다', example:'I caught a <em>glimpse</em> of the star.' },
+  { num:22, word:'make up for', pos:'구동사', type:'blank', src:'B', correct:'보상하다, 벌충하다', student:'', tip:'make up for = 부족한 부분을 채우다', example:'Nothing can <em>make up for</em> lost time.' },
+  { num:23, word:'staple',      pos:'명사/형용사', type:'wrong', src:'B', correct:'주요 식품, 주식', student:'주된', tip:'staple food = 주식. staple = 기본이 되는 것', example:'Rice is a <em>staple</em> in Asia.' },
+  { num:29, word:'activate',    pos:'동사',   type:'wrong', src:'B', correct:'활성화하다', student:'활동적인', tip:'activate = active(활동적인)의 동사형', example:'<em>Activate</em> your account first.' },
+  { num:30, word:'subsequent',  pos:'형용사', type:'wrong', src:'B', correct:'이후의, 차후의', student:'연속적인', tip:'subsequent = sub(뒤에) + sequent(따르는)', example:'<em>Subsequent</em> events proved him right.' },
+  { num:36, word:'bind',        pos:'동사',   type:'wrong', src:'B', correct:'묶다, 결합하다', student:'줄', tip:'bind = 단단히 묶다. bound(과거형)', example:'The contract <em>binds</em> both parties.' },
+  { num:37, word:'behalf',      pos:'명사',   type:'wrong', src:'B', correct:'대신, 이익', student:'절반', tip:'on behalf of = ~을 대신하여', example:'She spoke on my <em>behalf</em>.' },
+  { num:43, word:'shrug',       pos:'동사/명사', type:'blank', src:'B', correct:'어깨를 으쓱하다', student:'', tip:'shrug = 모르거나 무관심함을 어깨로 표현', example:'He just <em>shrugged</em> in response.' },
+  { num:44, word:'supreme',     pos:'형용사', type:'wrong', src:'B', correct:'최고의', student:'상호의', tip:'supreme = 최고 권위의. Supreme Court = 대법원', example:'She made the <em>supreme</em> sacrifice.' },
+  { num:46, word:'converge',    pos:'동사',   type:'blank', src:'B', correct:'수렴하다, 모이다', student:'', tip:'con(함께) + verge(향하다) → 한 점으로 모이다', example:'Two rivers <em>converge</em> here.' },
+  { num:49, word:'go into',     pos:'구동사', type:'blank', src:'B', correct:'조사하다, 들어가다', student:'', tip:'go into detail = 자세히 살펴보다', example:"Let's <em>go into</em> the issue further." },
+];
+
+const cards = [...cardsA, ...cardsB];
+const originalCards = [...cards];
+
+let idx = 0, startFace = 'word', showingBack = false, isAnimating = false, isShuffled = false, pointerId = null, cardEl = null;
+
+document.getElementById('btn-meaning').addEventListener('click', () => setMode('meaning'));
+document.getElementById('btn-word').addEventListener('click', () => setMode('word'));
+function setMode(m) {
+  if (isAnimating) return;
+  startFace = m; showingBack = false;
+  document.getElementById('btn-meaning').classList.toggle('active', m === 'meaning');
+  document.getElementById('btn-word').classList.toggle('active', m === 'word');
+  if (idx < cards.length) renderCard(0);
+}
+
+document.getElementById('btn-random').addEventListener('click', function() {
+  if (isAnimating) return;
+  if (!isShuffled) {
+    const a = [...cards]; for (let i = a.length-1; i>0; i--) { const j = Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; }
+    cards.length = 0; a.forEach(c => cards.push(c));
+    isShuffled = true; this.classList.add('shuffled'); this.textContent = '🔀 랜덤ON';
+  } else {
+    cards.length = 0; originalCards.forEach(c => cards.push(c));
+    isShuffled = false; this.classList.remove('shuffled'); this.textContent = '🔀 랜덤';
+  }
+  idx = 0; showingBack = false; buildDots(); renderCard(0);
+});
+
+function buildDots() {
+  const w = document.getElementById('prog-dots'); w.innerHTML = '';
+  cards.forEach((_,i) => { const d = document.createElement('div'); d.className='pdot'; d.id=`dot-${i}`; w.appendChild(d); });
+  updateDots();
+}
+function updateDots() {
+  const isEnd = idx >= cards.length;
+  cards.forEach((_,i) => { const d = document.getElementById(`dot-${i}`); if(!d)return; d.className = 'pdot' + (isEnd ? ' done all' : i<idx ? ' done' : i===idx ? ' current' : ''); });
+  document.getElementById('cur').textContent = isEnd ? '✓' : idx+1;
+  document.getElementById('tot').textContent = cards.length;
+}
+
+function buildCard(card) {
+  const sc = card.src==='A' ? 'b-src1' : 'b-src2';
+  const sl = card.src==='A' ? 'Unit 11~12' : 'Unit 01~09';
+  const tc = card.type==='blank' ? 'b-blank' : 'b-wrong';
+  const tl = card.type==='blank' ? '미기재' : '오답';
+  const badgesHTML = `<div class="badges"><span class="badge b-num">No.${card.num}</span><span class="badge ${tc}">${tl}</span><span class="badge b-pos">${card.pos}</span><span class="badge ${sc}">${sl}</span></div>`;
+  const srClass = card.type==='blank' ? 'blank-row' : 'wrong-row';
+  const srContent = card.student ? `<span class="student-ans">${card.student}</span>` : `<span class="blank-ans">미기재</span>`;
+  const studentHTML = `<div class="student-row ${srClass}"><span class="student-label">내 답</span>${srContent}</div>`;
+  const WF = `<div class="face-word">${badgesHTML}<div class="word-center"><div class="word-label">영단어</div><div class="word-text">${card.word}</div><div class="word-pos">${card.pos}</div></div><div class="tap-hint">탭해서 뜻 보기</div></div>`;
+  const WB = `<div class="face-word">${badgesHTML}<div class="scroll-area"><div class="word-center" style="min-height:80px"><div class="word-label">영단어</div><div class="word-text" style="font-size:1.7rem">${card.word}</div></div><div class="meaning-label" style="text-align:center;margin-bottom:6px">뜻</div><div class="meaning-text" style="text-align:center;font-size:1.4rem;margin-bottom:10px">${card.correct}</div>${studentHTML}<div class="tip-box"><div class="tip-title">💡 암기 팁</div>${card.tip}</div><div class="example-box">${card.example}</div></div><div class="tap-hint">탭해서 영단어 보기</div></div>`;
+  const MF = `<div class="face-meaning">${badgesHTML}<div class="meaning-center"><div class="meaning-label">뜻</div><div class="meaning-text">${card.correct}</div></div><div class="tap-hint">탭해서 영단어 보기</div></div>`;
+  const MB = `<div class="face-meaning">${badgesHTML}<div class="scroll-area"><div class="word-center" style="min-height:100px"><div class="word-label">영단어</div><div class="word-text">${card.word}</div><div class="word-pos">${card.pos}</div></div>${studentHTML}<div class="tip-box"><div class="tip-title">💡 암기 팁</div>${card.tip}</div><div class="example-box">${card.example}</div></div><div class="tap-hint">탭해서 뜻 보기</div></div>`;
+  return { front: startFace==='meaning'?MF:WF, back: startFace==='meaning'?MB:WB };
+}
+
+function renderCard(dir) {
+  const vp = document.getElementById('viewport');
+  const old = vp.querySelector('.flash-card, .end-card');
+  const isEnd = idx >= cards.length;
+  const el = document.createElement('div');
+  if (isEnd) {
+    el.className = 'end-card no-transition';
+    el.innerHTML = `<div class="end-face"><div class="end-line"></div><div class="end-content"><div class="end-emoji">🎉</div><div><div class="end-label">All Done</div><div class="end-title">학습을 모두 마쳤어요!</div></div><div class="end-subtitle">오답 단어 ${cards.length}개를 모두 복습했어요.<br>한 번 더 반복하면 더욱 확실해져요 ✨</div><button class="restart-btn" id="restart-btn">↻ 다시 시작하기</button><div class="end-hint">← 스와이프하면 마지막 카드로</div></div></div>`;
+  } else {
+    const c = cards[idx]; const {front, back} = buildCard(c);
+    el.className = 'flash-card no-transition';
+    el.innerHTML = `<div class="card-face"><div class="card-line ${c.type==='blank'?'line-blank':'line-wrong'}"></div><div class="card-content">${showingBack?back:front}</div></div>`;
+  }
+  if (dir !== 0) { el.style.transform = `translateX(${dir>0?'100%':'-100%'})`; isAnimating = true; }
+  vp.appendChild(el); cardEl = el;
+  if (isEnd) { const b = el.querySelector('#restart-btn'); if(b) b.addEventListener('click', restart); }
+  requestAnimationFrame(() => requestAnimationFrame(() => { el.classList.remove('no-transition'); el.style.transform = 'translateX(0)'; }));
+  if (old) { old.classList.remove('no-transition'); old.style.transform = `translateX(${dir>0?'-100%':'100%'})`; old.style.opacity='0.3'; setTimeout(()=>{if(old.parentNode)old.remove();isAnimating=false;},350); } else { isAnimating=false; }
+  updateDots();
+}
+
+function restart() { if(isAnimating)return; idx=0;showingBack=false;haptic(15);renderCard(-1); }
+
+function flipCard(el) {
+  if(!el||isAnimating||idx>=cards.length||!el.querySelector('.card-face'))return;
+  showingBack=!showingBack;
+  const c=cards[idx];const{front,back}=buildCard(c);
+  const content=el.querySelector('.card-content'),face=el.querySelector('.card-face');
+  face.style.transition='transform 0.15s ease';face.style.transform='scale(0.97)';
+  setTimeout(()=>{content.innerHTML=showingBack?back:front;face.style.transform='scale(1)';},80);
+  setTimeout(()=>{face.style.transition='';},230);
+}
+
+function haptic(ms=8){try{if(navigator.vibrate)navigator.vibrate(ms);}catch(_){}}
+
+function initInteraction() {
+  const vp = document.getElementById('viewport');
+  let sX=0,sY=0,sT=0,tracking=false,hasMoved=false,locked=null;
+  const DL=8,TT=8,SD=60,SV=30,ST2=350,VD=45,VV=25;
+  const getCard=()=>vp.querySelector('.flash-card,.end-card');
+  const hideInds=()=>['ind-prev','ind-next','ind-up','ind-down'].forEach(id=>document.getElementById(id).style.opacity='0');
+
+  function start(x,y){if(isAnimating)return false;tracking=true;hasMoved=false;locked=null;sX=x;sY=y;sT=Date.now();const c=getCard();if(c)c.classList.add('dragging');return true;}
+  function move(x,y,ev){
+    if(!tracking)return;const dx=x-sX,dy=y-sY;
+    if(!locked){if(Math.abs(dx)>DL||Math.abs(dy)>DL)locked=Math.abs(dx)>Math.abs(dy)*1.1?'h':Math.abs(dy)>Math.abs(dx)*1.1?'v':'h';}
+    if(locked==='h'){if(ev&&ev.cancelable&&ev.type==='touchmove')ev.preventDefault();hasMoved=true;const c=getCard();if(c){const f=(dx>0&&idx===0)||(dx<0&&idx>=cards.length)?0.25:0.55;c.style.transform=`translateX(${dx*f}px)`;}const t=Math.min(Math.abs(dx)/70,1);const ip=document.getElementById('ind-prev'),ix=document.getElementById('ind-next');if(dx>5){ip.style.opacity=String(t*0.9);ix.style.opacity='0';}else if(dx<-5){ix.style.opacity=String(t*0.9);ip.style.opacity='0';}else{hideInds();}}
+    else if(locked==='v'){if(ev&&ev.cancelable&&ev.type==='touchmove')ev.preventDefault();hasMoved=true;const c=getCard();if(c)c.style.transform=`translateY(${dy*0.25}px)`;const t=Math.min(Math.abs(dy)/50,1);const iu=document.getElementById('ind-up'),id2=document.getElementById('ind-down');if(dy<-5){iu.style.opacity=String(t*0.9);id2.style.opacity='0';}else if(dy>5){id2.style.opacity=String(t*0.9);iu.style.opacity='0';}else{hideInds();}}
+  }
+  function end(ex,ey){
+    if(!tracking&&locked!=='h'&&locked!=='v'){locked=null;return;}
+    tracking=false;hideInds();const c=getCard();if(c)c.classList.remove('dragging');
+    const dx=ex-sX,dy=ey-sY,dt=Date.now()-sT;
+    if(locked==='v'&&hasMoved){if(c)c.style.transform='';const ok=dt<ST2&&Math.abs(dy)>VV||Math.abs(dy)>VD;if(ok){if(idx<cards.length){haptic(8);flipCard(c);}}else{if(c){c.style.transition='transform 0.25s';c.style.transform='translateY(0)';setTimeout(()=>{if(c)c.style.transition='';},280);}}locked=null;return;}
+    const wasH=locked==='h'&&hasMoved,fast=wasH&&dt<ST2&&Math.abs(dx)>SV,far=wasH&&Math.abs(dx)>SD;
+    if(wasH&&(fast||far)){if(c)c.style.transform='';if(dx>0&&idx>0){idx--;showingBack=false;haptic(10);renderCard(-1);}else if(dx<0&&idx<cards.length){idx++;showingBack=false;haptic(10);renderCard(1);}else if(c){c.style.transition='transform 0.3s cubic-bezier(.175,.885,.32,1.275)';c.style.transform='translateX(0)';setTimeout(()=>{if(c)c.style.transition='';},350);}}
+    else{if(c&&wasH){c.style.transition='transform 0.25s';c.style.transform='translateX(0)';setTimeout(()=>{if(c)c.style.transition='';},280);}else if(c)c.style.transform='';if(!locked&&Math.abs(dx)<TT&&Math.abs(dy)<TT)flipCard(c);}
+    locked=null;
+  }
+  function cancel(){tracking=false;hasMoved=false;locked=null;const c=getCard();if(c){c.classList.remove('dragging');c.style.transition='transform 0.25s';c.style.transform='translateX(0)';setTimeout(()=>{if(c)c.style.transition='';},280);}hideInds();}
+
+  if(window.PointerEvent){
+    vp.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse'&&e.button!==0)return;if(pointerId!==null)return;if(!start(e.clientX,e.clientY))return;pointerId=e.pointerId;});
+    vp.addEventListener('pointermove',e=>{if(e.pointerId!==pointerId)return;move(e.clientX,e.clientY,e);});
+    vp.addEventListener('pointerup',e=>{if(e.pointerId!==pointerId)return;pointerId=null;end(e.clientX,e.clientY);});
+    vp.addEventListener('pointercancel',e=>{if(e.pointerId!==pointerId)return;pointerId=null;cancel();});
+  } else {
+    vp.addEventListener('touchstart',e=>{if(e.touches.length!==1)return;start(e.touches[0].clientX,e.touches[0].clientY);},{passive:true});
+    vp.addEventListener('touchmove',e=>{if(!tracking||e.touches.length!==1)return;move(e.touches[0].clientX,e.touches[0].clientY,e);},{passive:false});
+    vp.addEventListener('touchend',e=>{if(!e.changedTouches.length)return;end(e.changedTouches[0].clientX,e.changedTouches[0].clientY);},{passive:true});
+    vp.addEventListener('touchcancel',cancel,{passive:true});
+    let md=false;
+    vp.addEventListener('mousedown',e=>{if(!start(e.clientX,e.clientY))return;md=true;});
+    window.addEventListener('mousemove',e=>{if(!md)return;move(e.clientX,e.clientY,e);});
+    window.addEventListener('mouseup',e=>{if(!md)return;md=false;end(e.clientX,e.clientY);});
+  }
+}
+
+document.addEventListener('keydown',e=>{
+  if(isAnimating)return;
+  if(e.key==='ArrowRight'&&idx>0){idx--;showingBack=false;renderCard(-1);}
+  else if(e.key==='ArrowLeft'&&idx<cards.length){idx++;showingBack=false;renderCard(1);}
+  else if(e.key===' '||e.key==='Enter'){e.preventDefault();if(idx>=cards.length)restart();else if(cardEl)flipCard(cardEl);}
+});
+
+let lastTE=0;
+document.addEventListener('touchend',e=>{const n=Date.now();if(n-lastTE<=300)e.preventDefault();lastTE=n;},{passive:false});
+
+window.addEventListener('resize',()=>document.documentElement.style.setProperty('--app-vh',`${window.innerHeight*0.01}px`));
+
+buildDots();
+initInteraction();
+renderCard(0);
+</script>
+</body>
+</html>
